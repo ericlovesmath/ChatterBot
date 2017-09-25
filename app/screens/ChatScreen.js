@@ -172,7 +172,7 @@ function CalcInstance2(instanceText,LastText) {
     cost: Trainer.cost.CROSS_BINARY
   })
   //RemadeOutput = this.Tests.replace(/\d+./g, x => String.fromCharCode('0b' + x));
-  return myLSTM.activate(Normalize(instanceText));
+  return myLSTM;
 }
 
 function shuffle(array) {
