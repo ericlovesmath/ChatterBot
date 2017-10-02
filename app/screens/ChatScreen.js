@@ -8,6 +8,7 @@ let inst = null;
 let key = null;
 let LastMessage = "Hello";
 let TrainingData = [];
+let inputNum = 10;
 let synaptic = require('synaptic'); // this line is not needed in the browser
 let Neuron = synaptic.Neuron,
   Layer = synaptic.Layer,
@@ -16,7 +17,7 @@ let Neuron = synaptic.Neuron,
   Architect = synaptic.Architect;
 LSTM.prototype = new Network();
 LSTM.prototype.constructor = LSTM;
-let myLSTM = new LSTM(100,101,100);
+let myLSTM = new LSTM(inputNum, inputNum + 1, inputNum);
 let trainer = new Trainer(myLSTM);
 
 class ChatScreen extends React.Component {
@@ -78,11 +79,10 @@ class ChatScreen extends React.Component {
       LastMessage = "Hello";
     }
     messages.unshift(MessageObj(CalcInstance2(text, LastMessage), ++this.id)); /////////////////////////Change CalcInstance2 to 1
-    let LastMessage = text;
+    LastMessage = text;
     if (LastMessage === undefined) {
       LastMessage = "Hello";
     }
-    console.log(text)
     this.setState({ messages });
   }
 
@@ -109,6 +109,7 @@ class ChatScreen extends React.Component {
     if (removeInstances == true) {
       allInstances = [["Hello", ["Hello", "Hi", "Wassup", "Hey"]]];
     }
+    //console.log(this.state.messages);
     return (
       <GiftedChat
         messages={this.state.messages}
@@ -157,34 +158,25 @@ function CalcInstance(instanceText) {
   }
   return returnMessage;
 }
-function CalcInstance2(instanceText,LastText) {
+function CalcInstance2(instanceText, LastText) {
   TrainingData.push({
-    input: Normalize(instanceText), 
+    input: Normalize(instanceText),
     output: Normalize(LastText)
   });
-  
-  //console.log(TrainingData);
-  trainer.train(TrainingData,{
-    rate: .3,
+  console.log(Normalize(instanceText));
+  console.log(Normalize(LastText));
+  trainer.train(TrainingData, {
+    rate: .1,
     iterations: 1000,
-    error: 5,
+    error: 1,
     shuffle: false,
     cost: Trainer.cost.CROSS_BINARY
   })
-  //RemadeOutput = this.Tests.replace(/\d+./g, x => String.fromCharCode('0b' + x));
-  return myLSTM;
-}
+  let binOutput = myLSTM.activate(Normalize(instanceText));
+  console.log(binToText(binOutput));
+  return binToText(binOutput);
 
-function shuffle(array) {
-  let currentIndex = array.length, temporaryValue, randomIndex;
-  while (0 !== currentIndex) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex -= 1;
-    temporaryValue = array[currentIndex];
-    array[currentIndex] = array[randomIndex];
-    array[randomIndex] = temporaryValue;
-  }
-  return array;
+  //RemadeOutput = this.Tests.replace(/\d+./g, x => String.fromCharCode('0b' + x));
 }
 
 function LSTM(originalInput, blocks, originalOutput) {
@@ -229,12 +221,18 @@ function LSTM(originalInput, blocks, originalOutput) {
   });
 }
 function Normalize(ascii) {
-  let bin = Array(100).join("0");
+  let bin = Array(inputNum).join("0");
   for (let i = 0; i < ascii.length; i++) {
     let code = ascii.charCodeAt(i);
     bin += ('0000000000' + code.toString(2)).slice(-10);
   }
-  return bin.slice(-10 * 10).split('').reverse();
+  return bin.slice(-10 * 10).split('').map(Number);
 }
-
+function binToText(binOutput) {
+  let outputText = binOutput.map(Math.round).join("");
+  console.log(outputText);
+  return outputText.split(/\s/).map(function (val) {
+    return String.fromCharCode(parseInt(val, 2));
+  }).join("");
+}
 export default ChatScreen;
