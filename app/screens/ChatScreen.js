@@ -8,7 +8,7 @@ let inst = null;
 let key = null;
 let LastMessage = "Hello";
 let TrainingData = [];
-let inputNum = 10;
+let inputNum = 20;
 let synaptic = require('synaptic'); // this line is not needed in the browser
 let Neuron = synaptic.Neuron,
   Layer = synaptic.Layer,
@@ -229,7 +229,7 @@ function Normalize(ascii) {
   return bin.slice(-10 * 10).split('').map(Number);
 }
 function binToText(binOutput) {
-  let outputText = binOutput.map(Math.round).join("");
+  let outputText = binOutput.map(Math.round).join("").replace(/(.{10})/g,"$1 ");
   console.log(outputText);
   return outputText.split(/\s/).map(function (val) {
     return String.fromCharCode(parseInt(val, 2));
