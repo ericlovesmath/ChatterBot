@@ -2,13 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, View, Button } from 'react-native';
 import { GiftedChat } from 'react-native-gifted-chat';
 import { StackNavigator } from 'react-navigation';
+import WordBag from '../words';
+
 
 let allInstances = [];
 let inst = null;
 let key = null;
 let LastMessage = "Hello";
 let TrainingData = [];
-let inputNum = 20;
+let inputNum = 30;
 let synaptic = require('synaptic'); // this line is not needed in the browser
 let Neuron = synaptic.Neuron,
   Layer = synaptic.Layer,
@@ -75,14 +77,8 @@ class ChatScreen extends React.Component {
     const response = this.state.messages[0];
     const { text } = response;
     const messages = this.state.messages.slice();
-    if (LastMessage === undefined) {
-      LastMessage = "Hello";
-    }
     messages.unshift(MessageObj(CalcInstance2(text, LastMessage), ++this.id)); /////////////////////////Change CalcInstance2 to 1
     LastMessage = text;
-    if (LastMessage === undefined) {
-      LastMessage = "Hello";
-    }
     this.setState({ messages });
   }
 
@@ -159,25 +155,54 @@ function CalcInstance(instanceText) {
   return returnMessage;
 }
 function CalcInstance2(instanceText, LastText) {
+  SplitText = instanceText.split(" ");
+  SplitLastText = LastText.split(" ");
+  TrainingInput = [];
+  TrainingOutput = [];
+  for (let i = 0; i < SplitText.length; i++) {
+    TrainingInput.push(WordBag.WordToNum(SplitText[i].toLowerCase()));
+  }
+  for (let i = 0; i < SplitLastText.length; i++) {
+    TrainingOutput.push(WordBag.WordToNum(SplitLastText[i].toLowerCase()));
+  }
+  if (TrainingInput.length < inputNum) {
+    TrainingInput.push(...Array(inputNum - TrainingInput.length).fill(""));
+  }
+  if (TrainingOutput.length < inputNum) {
+    TrainingOutput.push(...Array(inputNum - TrainingOutput.length).fill(""));
+  }
+  //console.log(TrainingInput);
+  //console.log(TrainingOutput);
   TrainingData.push({
-    input: Normalize(instanceText),
-    output: Normalize(LastText)
+    input: TrainingInput,
+    output: TrainingOutput
   });
-  console.log(Normalize(instanceText));
-  console.log(Normalize(LastText));
+
   trainer.train(TrainingData, {
     rate: .1,
-    iterations: 1000,
+    iterations: 2000,
     error: 1,
     shuffle: false,
     cost: Trainer.cost.CROSS_BINARY
   })
-  let binOutput = myLSTM.activate(Normalize(instanceText));
-  console.log(binToText(binOutput));
-  return binToText(binOutput);
 
-  //RemadeOutput = this.Tests.replace(/\d+./g, x => String.fromCharCode('0b' + x));
+  let Output = myLSTM.activate(TrainingInput);
+  //console.log(Output);
+  let VectorList = Output.map(scaleOutput);
+  let WordList = []
+  console.log(VectorList + "       VectorList");
+  for (i = 0; i < VectorList.length; i++) {
+    console.log(VectorList[i] + "        VectorList[i]");
+    WordList.push(WordBag.NumToWord(Math.floor(VectorList[i])));
+    console.log(Math.floor(VectorList[i]) - 1 + "        Floored value");
+  }
+
+  return WordList.filter(function (word) { return word != ""; }).join(" ");
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function LSTM(originalInput, blocks, originalOutput) {
   // create the layers
@@ -220,19 +245,9 @@ function LSTM(originalInput, blocks, originalOutput) {
     output: outputLayer
   });
 }
-function Normalize(ascii) {
-  let bin = Array(inputNum).join("0");
-  for (let i = 0; i < ascii.length; i++) {
-    let code = ascii.charCodeAt(i);
-    bin += ('0000000000' + code.toString(2)).slice(-10);
-  }
-  return bin.slice(-10 * 10).split('').map(Number);
-}
-function binToText(binOutput) {
-  let outputText = binOutput.map(Math.round).join("").replace(/(.{10})/g,"$1 ");
-  console.log(outputText);
-  return outputText.split(/\s/).map(function (val) {
-    return String.fromCharCode(parseInt(val, 2));
-  }).join("");
-}
+
+function scaleOutput(number) {
+  return number * WordBag.Size();
+};
+
 export default ChatScreen;
